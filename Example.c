@@ -34,7 +34,7 @@ int main(void)
 {
 	TsunamiInitialise();
 
-	TsunamiStartTimeline("MyTimeline", "Test.vcd", (1 * 1024 * 1024));
+	TsunamiStartTimeline("MyTimeline", "TsunamiExample.vcd", (1 * 1024 * 1024));
 	{
 		uint32_t i, q;
 		
@@ -57,32 +57,6 @@ int main(void)
 		}
 	}
 	TsunamiFinishTimeline("MyTimeline");	
-
-	TsunamiStartTimeline("MyTimeline2", "Test2.vcd", (1 * 1024 * 1024));
-	{
-		uint32_t i, q;
-		
-		for (i = 0; i < 32; i ++) {
-			/* Basic value dumping */
-			TsunamiSetValue(i, "MyTimeline2", "root.basic.value");
-			
-			/* Pulse values */
-			if (i & 0x1)
-				TsunamiPulseValue(1, "MyTimeline2", "root.pulse.value");
-
-			/* Formatted-name value dumping */
-			q = 0;
-			TsunamiSetValue((i * 1), "MyTimeline2", "root.format_test.signal[%i]", q);
-			q = 1;
-			TsunamiSetValue((i * 2), "MyTimeline2", "root.format_test.signal[%i]", q);
-			q = 2;
-			TsunamiSetValue((i * 4), "MyTimeline2", "root.format_test.signal[%i]", q);
-
-			/* Advance timeline */
-			TsunamiAdvanceTimeline("MyTimeline2");
-		}
-	}
-	TsunamiFinishTimeline("MyTimeline2");
 
 	return 0;
 }

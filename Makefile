@@ -1,12 +1,12 @@
 ################################################################################
-# Tsunami Makefile
+# TsunamiExample Makefile
 ################################################################################
 UNAME       = $(shell uname)
 MACHINE     = $(shell uname -m)
 GCCVER      = $(shell gcc -dumpversion | cut -d '.' -f 1)
 CC          = cc
 LD          = g++
-BINNAME     = Tsunami
+BINNAME     = TsunamiExample
 TOP         = $(shell pwd)
 
 ################################################################################
@@ -37,7 +37,7 @@ endif
 all: message
 
 message:
-	@echo "[01;32mTsunami                 Build Targets Menu[00m"
+	@echo "[01;32mTsunamiExample          Build Targets Menu[00m"
 	@echo "[01;32m==========================================[00m"
 	@echo          "   make debug    - Debug build"
 	@echo          "   make release  - Release build"
