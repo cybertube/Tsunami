@@ -45,8 +45,7 @@
    SOFTWARE.   
 */
 
-#ifndef __TSUNAMI_HEADER___
-#define __TSUNAMI_HEADER__
+#pragma once
 
 /* ================================================================================ */
 /* Master enable switch                                                             */
@@ -108,4 +107,3 @@ void TsunamiUpdateTimelineToRealtime(const char *timeline_name);
 }
 #endif
 
-#endif

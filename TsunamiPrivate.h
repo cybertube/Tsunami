@@ -25,8 +25,7 @@
    SOFTWARE.   
 */
 
-#ifndef __TSUNAMIPRIVATE_HEADER___
-#define __TSUNAMIPRIVATE_HEADER__
+#pragma once
 
 #if TSUNAMI_ENABLE
 
@@ -129,4 +128,3 @@ void             TsunamiSetRange_Internal(TsunamiTimeline *timeline, TsunamiVari
 
 #endif
 
-#endif /* !defined(__TSUNAMIPRIVATE_HEADER__) */
