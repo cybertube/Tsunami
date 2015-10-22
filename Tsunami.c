@@ -76,8 +76,6 @@ struct _TsunamiTimeline {
 	char *name;        /* Name of the timeline */
 	char *filename;    /* VCD filename to write the timeline to on Finish() */
 
-	FILE *output_vcd_file;
-
 	struct {
 		TsunamiLogEntry *entry;             /* Log storage buffer              */
 		uint32_t         entry_alloc_count; /* Number of log entries allocated */
@@ -129,43 +127,55 @@ TsunamiLogEntry *TsunamiGetLogWritePtrAndAdvance(TsunamiTimeline *timeline)
 	return entry;
 }
 
-void TsunamiDumpSignals_Traverse(TsunamiTimeline *timeline, TsunamiVariable *var, uint32_t depth)
+void TsunamiDumpSignals_Traverse(FILE            *output_vcd_file, 
+								 TsunamiTimeline *timeline, 
+								 TsunamiVariable *var, 
+								 uint32_t         depth)
 {
 	uint32_t i;
 
 	while (var) {
 		for (i = 0; i < depth; i ++)
-			fprintf(timeline->output_vcd_file, "   ");
+			fprintf(output_vcd_file, "   ");
 
 		if (var->head) {
-			fprintf(timeline->output_vcd_file, "$scope module %s $end\n", var->node_name);			
+			fprintf(output_vcd_file, "$scope module %s $end\n", var->node_name);			
 		} else {
-			fprintf(timeline->output_vcd_file, "$var wire %i %s %s [31:0] $end\n", 32, var->uid, var->node_name);
+			fprintf(output_vcd_file, "$var wire %i %s %s [31:0] $end\n", 32, var->uid, var->node_name);
 		}
 		
 		if (var->head) {
-			TsunamiDumpSignals_Traverse(timeline, var->head, (depth + 1));
+			TsunamiDumpSignals_Traverse(output_vcd_file,
+										timeline, 
+										var->head, 
+										(depth + 1));
 			for (i = 0; i < depth; i ++)
-				fprintf(timeline->output_vcd_file, "   ");	
-			fprintf(timeline->output_vcd_file, "$upscope $end\n");		
+				fprintf(output_vcd_file, "   ");	
+			fprintf(output_vcd_file, "$upscope $end\n");		
 		}
 
 		var = var->next;
 	}
 }
 
-void TsunamiDumpRanges_Traverse(TsunamiTimeline *timeline, TsunamiVariable *var, uint32_t depth)
+void TsunamiDumpRanges_Traverse(FILE            *output_vcd_file,
+								TsunamiTimeline *timeline, 
+								TsunamiVariable *var, 
+								uint32_t         depth)
 {
 	while (var) {
 		if ((!var->head) && (var->range)) {
 			uint32_t i;
-			fprintf(timeline->output_vcd_file, "#%llu\n", (unsigned long long) timeline->clk);
-			fprintf(timeline->output_vcd_file, "b");
+			fprintf(output_vcd_file, "#%llu\n", (unsigned long long) timeline->clk);
+			fprintf(output_vcd_file, "b");
 			for (i = 0; i < 32; i ++) 
-				fprintf(timeline->output_vcd_file, "%c", '0' + ((var->range >> (31 - i)) & 0x1));
-			fprintf(timeline->output_vcd_file, " %s\n", var->uid);			
+				fprintf(output_vcd_file, "%c", '0' + ((var->range >> (31 - i)) & 0x1));
+			fprintf(output_vcd_file, " %s\n", var->uid);			
 		} else {
-			TsunamiDumpRanges_Traverse(timeline, var->head, (depth + 1));			
+			TsunamiDumpRanges_Traverse(output_vcd_file, 
+									   timeline, 
+									   var->head, 
+									   (depth + 1));			
 		}
 			
 		var = var->next;
@@ -218,11 +228,11 @@ void TsunamiTerminateSignalHandler(int signal)
 	TsunamiContext  *ctx      = &_tsunami_context;
 	TsunamiTimeline *timeline = ctx->timeline_head;
 	
-	printf("TSUNAMI: Caught signal, finishing all outstanding timelines...\n");
+	printf("TSUNAMI: Caught signal, flushing all outstanding timelines...\n");
 
 	/* Finish all outstanding timelines */
 	while (timeline) {
-		TsunamiFinishTimeline(timeline->name);
+		TsunamiFlushTimeline(timeline->name);
 		timeline = timeline->next;
 	}
 	
@@ -261,19 +271,30 @@ void TsunamiInitialise(void)
 
 void TsunamiStartTimeline(const char *timeline_name, const char *filename, uint32_t log_size_bytes)
 {
-	TsunamiContext *ctx = &_tsunami_context;
-
+	TsunamiContext  *ctx      = &_tsunami_context;
+	
 	TsunamiLock_Internal(ctx);
 	{
-		TsunamiTimeline *timeline;
+		TsunamiTimeline *timeline = TsunamiFindTimeline_Internal(timeline_name);
+		
+		if (timeline) {
+			printf("TSUNAMI: Found existing timeline for \"%s\", flushing its contents and restarting it from scratch\n",
+				   timeline_name);
+			TsunamiUnlock_Internal(ctx);
+			TsunamiFlushTimeline(timeline_name);
+			TsunamiLock_Internal(ctx);
+			timeline = NULL;
+		}
 
 		printf("TSUNAMI: Starting timeline \"%s\", logging into %u byte buffer to be written to VCD file \"%s\"\n",
 			   timeline_name, (unsigned int) log_size_bytes, filename);
 
 		/* Create a new timeline */
-		timeline       = ((TsunamiTimeline *) calloc(sizeof(TsunamiTimeline), 1));
-		timeline->name = ((char *) malloc(sizeof(char) * (strlen(timeline_name) + 1)));
+		timeline           = ((TsunamiTimeline *) calloc(sizeof(TsunamiTimeline), 1));
+		timeline->name     = ((char *) malloc(sizeof(char) * (strlen(timeline_name) + 1)));
 		strcpy(timeline->name, timeline_name);
+		timeline->filename = ((char *) malloc(sizeof(char) * (strlen(filename) + 1)));
+		strcpy(timeline->filename, filename);
 
 		/* Add it to the linked list of timelines */
 		if (!ctx->timeline_count) {
@@ -285,7 +306,6 @@ void TsunamiStartTimeline(const char *timeline_name, const char *filename, uint3
 		ctx->timeline_count ++;
 
 		/* Setup the timeline */
-		timeline->output_vcd_file       = fopen(filename, "wb");
 		timeline->log.entry_alloc_count = (log_size_bytes / sizeof(TsunamiLogEntry));
 		timeline->log.entry             = ((TsunamiLogEntry *) calloc(sizeof(TsunamiLogEntry), timeline->log.entry_alloc_count));
 		
@@ -302,59 +322,72 @@ void TsunamiStartTimeline(const char *timeline_name, const char *filename, uint3
 	TsunamiUnlock_Internal(ctx);
 }
 
-void TsunamiFinishTimeline(const char *timeline_name)
+void TsunamiFlushTimeline(const char *timeline_name)
 {
 	TsunamiContext *ctx = &_tsunami_context;
 
 	TsunamiLock_Internal(ctx);
 	{
-		TsunamiTimeline *timeline = TsunamiFindTimeline_Internal(timeline_name);
+		TsunamiTimeline *timeline        = TsunamiFindTimeline_Internal(timeline_name);
+		FILE            *output_vcd_file = fopen(timeline->filename, "wb");
 
-		/* Write a simple timeline */
-		fprintf(timeline->output_vcd_file, "$timescale 1ns $end\n");
+		if (output_vcd_file) {
 
-		/* Dump signal hierarchy */
-		TsunamiDumpSignals_Traverse(timeline, timeline->var_root.head, 0);
+			/* Write a simple timeline */
+			fprintf(output_vcd_file, "$timescale 1ns $end\n");
 
-		/* Dump change deltas */
-		{
-			TsunamiLogEntry *entry;
-			uint32_t         i, j, k;
-			uint32_t         found_first_time = 0;
+			/* Dump signal hierarchy */
+			TsunamiDumpSignals_Traverse(output_vcd_file,
+										timeline, 
+										timeline->var_root.head, 
+										0);
 
-			for (i = 0, j = timeline->log.entry_start_index; i < timeline->log.entry_count; i ++) {
+			/* Dump change deltas */
+			{
+				TsunamiLogEntry *entry;
+				uint32_t         i, j, k;
+				uint32_t         found_first_time = 0;
+
+				for (i = 0, j = timeline->log.entry_start_index; i < timeline->log.entry_count; i ++) {
 			
-				entry = (timeline->log.entry + j);
+					entry = (timeline->log.entry + j);
 
-				/* The first entry in the file should be a time stamp so wait for it */
-				if (!found_first_time && (entry->type != TsunamiLogEntryType_NewTime))
-					goto skip;
+					/* The first entry in the file should be a time stamp so wait for it */
+					if (!found_first_time && (entry->type != TsunamiLogEntryType_NewTime))
+						goto skip;
 
-				switch (entry->type) {
-				case TsunamiLogEntryType_NewTime:
-					fprintf(timeline->output_vcd_file, "#%llu\n", (unsigned long long) entry->new_time.time);
-					found_first_time = 1;
-					break;
-				case TsunamiLogEntryType_ChangeValue:
-					fprintf(timeline->output_vcd_file, "b");
-					for (k = 0; k < 32; k ++) 
-						fprintf(timeline->output_vcd_file, "%c", '0' + ((entry->change_value.value >> (31 - k)) & 0x1));
-					fprintf(timeline->output_vcd_file, " %s\n", entry->change_value.var->uid);
-					break;
+					switch (entry->type) {
+					case TsunamiLogEntryType_NewTime:
+						fprintf(output_vcd_file, "#%llu\n", (unsigned long long) entry->new_time.time);
+						found_first_time = 1;
+						break;
+					case TsunamiLogEntryType_ChangeValue:
+						fprintf(output_vcd_file, "b");
+						for (k = 0; k < 32; k ++) 
+							fprintf(output_vcd_file, "%c", '0' + ((entry->change_value.value >> (31 - k)) & 0x1));
+						fprintf(output_vcd_file, " %s\n", entry->change_value.var->uid);
+						break;
+					}
+			
+				skip:
+					j = ((j + 1) % timeline->log.entry_alloc_count);
 				}
-			
-			skip:
-				j = ((j + 1) % timeline->log.entry_alloc_count);
 			}
-		}
 		
-		/* Dump ranges (for signals which have ranges set) */
-		TsunamiDumpRanges_Traverse(timeline, timeline->var_root.head, 0);
+			/* Dump ranges (for signals which have ranges set) */
+			TsunamiDumpRanges_Traverse(output_vcd_file,
+									   timeline, 
+									   timeline->var_root.head, 
+									   0);
 
-		fclose(timeline->output_vcd_file);
+			fclose(output_vcd_file);
 
-		printf("TSUNAMI: Finished timeline \"%s\" and written to VCD file \"%s\"\n",
-			   timeline_name, timeline->name);
+			printf("TSUNAMI: Flushed timeline \"%s\" and written to VCD file \"%s\"\n",
+				   timeline_name, timeline->filename);
+		} else {
+			printf("TSUNAMI: Failed to open VCD file \"%s\" for writing\n",
+				   timeline->filename);
+		}
 	}
 	TsunamiUnlock_Internal(ctx);
 }

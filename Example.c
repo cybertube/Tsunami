@@ -56,7 +56,7 @@ int main(void)
 			TsunamiAdvanceTimeline("MyTimeline");
 		}
 	}
-	TsunamiFinishTimeline("MyTimeline");	
+	TsunamiFlushTimeline("MyTimeline");	
 
 	return 0;
 }
