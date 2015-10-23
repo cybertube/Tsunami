@@ -85,8 +85,8 @@ void TsunamiInitialise(void);
    If this is called and an existing timeline with the same name is found, that previous timeline
    will be flushed its VCD file and new empty timeline started with the same name.
 */
-void TsunamiStartTimeline(const char *timeline_name,    /* NULL terminate timeline name                      */
-						  const char *filename,         /* Full path to write output VCD file to             */
+void TsunamiStartTimeline(const char *timeline_name,    /* NULL terminate timeline name                    */
+						  const char *filename,         /* Full path to write output VCD file to           */
 						  uint32_t    log_size_bytes);  /* Size in bytes of the internal circular 
 														   buffer used to log value changes within Tsunami */
 
@@ -179,4 +179,3 @@ void TsunamiUpdateTimelineToRealtime(const char *timeline_name);
 #ifdef __cplusplus
 }
 #endif
-

@@ -118,7 +118,7 @@ void             TsunamiSetRange_Internal(TsunamiTimeline *timeline, TsunamiVari
 
 #define TsunamiInitialise()                            ((void)0)
 #define TsunamiStartTimeline(_t_, _f_, _l_)            ((void)0)
-#define TsunamiFinishTimeline(_t_)                     ((void)0)
+#define TsunamiFlushTimeline(_t_)                      ((void)0)
 #define TsunamiAdvanceTimeline(_t_)                    ((void)0)
 #define TsunamiUpdateTimelineToRealtime(_t_)           ((void)0)
 #define TsunamiSetValue(_v_, _t_, _vf_, ...)           ((void)0)
