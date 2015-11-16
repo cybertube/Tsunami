@@ -34,7 +34,7 @@ int main(void)
 {
 	TsunamiInitialise();
 
-	TsunamiStartTimeline("MyTimeline", "TsunamiExample.vcd", (1 * 1024 * 1024));
+	TsunamiStartTimeline("MyTimeline", "TsunamiExample.vcd", TSUNAMI_DEFAULT_LOGSIZE);
 	{
 		uint32_t i, q;
 		

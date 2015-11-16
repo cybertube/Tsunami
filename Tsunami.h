@@ -61,6 +61,9 @@
 /* Required includes */
 #include "TsunamiPrivate.h"
 
+/* Constants */
+#define TSUNAMI_DEFAULT_LOGSIZE        (1 * 1024 * 1024)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -88,7 +91,8 @@ void TsunamiInitialise(void);
 void TsunamiStartTimeline(const char *timeline_name,    /* NULL terminate timeline name                    */
 						  const char *filename,         /* Full path to write output VCD file to           */
 						  uint32_t    log_size_bytes);  /* Size in bytes of the internal circular 
-														   buffer used to log value changes within Tsunami */
+														   buffer used to log value changes within Tsunami.
+														   Use TSUNAMI_DEFAULT_LOGSIZE if you don't care.  */
 
 /* TsunamiFlushTimeline():
 
