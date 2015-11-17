@@ -44,8 +44,8 @@ typedef struct _TsunamiVariable {
 
 	uint32_t        is_defined;
 	uint32_t        is_pulse;
-	uint32_t        last_value;
-	uint32_t        range;              /* Maximum this value can be.  If present,
+	uint64_t        last_value;
+	uint64_t        range;              /* Maximum this value can be.  If present,
 										   this is placed at the end of the trace
 										   to allow tools to draw analogue graphs
 										   will proper scale.                     */
@@ -66,8 +66,8 @@ extern "C" {
 /* Tsunami Internal APIs */
 TsunamiTimeline *TsunamiFindTimeline_Internal(const char *timeline_name);
 TsunamiVariable *TsunamiFindVariable_Internal(TsunamiTimeline *timeline, const char *name);
-void             TsunamiSetValue_Internal(TsunamiTimeline *timeline, TsunamiVariable *var, uint32_t value);
-void             TsunamiSetRange_Internal(TsunamiTimeline *timeline, TsunamiVariable *var, uint32_t range);
+void             TsunamiSetValue_Internal(TsunamiTimeline *timeline, TsunamiVariable *var, uint64_t value);
+void             TsunamiSetRange_Internal(TsunamiTimeline *timeline, TsunamiVariable *var, uint64_t range);
 	
 #define TsunamiSetValue_Base_Internal2(_inc_, _pulse_, _setrange_, _value_, _timeline_name_, _variable_name_) \
 	{																	\
@@ -87,7 +87,7 @@ void             TsunamiSetRange_Internal(TsunamiTimeline *timeline, TsunamiVari
 			else if (_setrange_)										\
 				TsunamiSetRange_Internal(timeline, var, (_value_));		\
 			else {														\
-				TsunamiSetValue_Internal(timeline, var, (uint32_t) (_value_)); \
+				TsunamiSetValue_Internal(timeline, var, (uint64_t) (_value_)); \
 				var->is_pulse = (_pulse_);								\
 			}															\
 		}																\

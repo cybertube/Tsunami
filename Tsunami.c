@@ -62,7 +62,7 @@ typedef struct _TsunamiLogEntry {
 
 		struct {
 			TsunamiVariable *var;
-			uint32_t         value;
+			uint64_t         value;
 		} change_value;
 	};
 
@@ -169,7 +169,7 @@ void TsunamiDumpRanges_Traverse(FILE            *output_vcd_file,
 			fprintf(output_vcd_file, "#%llu\n", (unsigned long long) timeline->clk);
 			fprintf(output_vcd_file, "b");
 			for (i = 0; i < 32; i ++) 
-				fprintf(output_vcd_file, "%c", '0' + ((var->range >> (31 - i)) & 0x1));
+				fprintf(output_vcd_file, "%c", (int) ('0' + ((var->range >> (63 - i)) & 0x1)));
 			fprintf(output_vcd_file, " %s\n", var->uid);			
 		} else {
 			TsunamiDumpRanges_Traverse(output_vcd_file, 
@@ -227,7 +227,7 @@ void TsunamiTerminateSignalHandler(int signal)
 {
 	TsunamiContext  *ctx      = &_tsunami_context;
 	TsunamiTimeline *timeline = ctx->timeline_head;
-	
+
 	printf("TSUNAMI: Caught signal, flushing all outstanding timelines...\n");
 
 	/* Finish all outstanding timelines */
@@ -328,65 +328,69 @@ void TsunamiFlushTimeline(const char *timeline_name)
 
 	TsunamiLock_Internal(ctx);
 	{
-		TsunamiTimeline *timeline        = TsunamiFindTimeline_Internal(timeline_name);
-		FILE            *output_vcd_file = fopen(timeline->filename, "wb");
+		TsunamiTimeline *timeline = TsunamiFindTimeline_Internal(timeline_name);
 
-		if (output_vcd_file) {
-
-			/* Write a simple timeline */
-			fprintf(output_vcd_file, "$timescale 1ns $end\n");
-
-			/* Dump signal hierarchy */
-			TsunamiDumpSignals_Traverse(output_vcd_file,
-										timeline, 
-										timeline->var_root.head, 
-										0);
-
-			/* Dump change deltas */
-			{
-				TsunamiLogEntry *entry;
-				uint32_t         i, j, k;
-				uint32_t         found_first_time = 0;
-
-				for (i = 0, j = timeline->log.entry_start_index; i < timeline->log.entry_count; i ++) {
-			
-					entry = (timeline->log.entry + j);
-
-					/* The first entry in the file should be a time stamp so wait for it */
-					if (!found_first_time && (entry->type != TsunamiLogEntryType_NewTime))
-						goto skip;
-
-					switch (entry->type) {
-					case TsunamiLogEntryType_NewTime:
-						fprintf(output_vcd_file, "#%llu\n", (unsigned long long) entry->new_time.time);
-						found_first_time = 1;
-						break;
-					case TsunamiLogEntryType_ChangeValue:
-						fprintf(output_vcd_file, "b");
-						for (k = 0; k < 32; k ++) 
-							fprintf(output_vcd_file, "%c", '0' + ((entry->change_value.value >> (31 - k)) & 0x1));
-						fprintf(output_vcd_file, " %s\n", entry->change_value.var->uid);
-						break;
-					}
-			
-				skip:
-					j = ((j + 1) % timeline->log.entry_alloc_count);
-				}
-			}
-		
-			/* Dump ranges (for signals which have ranges set) */
-			TsunamiDumpRanges_Traverse(output_vcd_file,
-									   timeline, 
-									   timeline->var_root.head, 
-									   0);
-
-			fclose(output_vcd_file);
-
-			printf("TSUNAMI: Flushed timeline \"%s\" and written to VCD file \"%s\"\n",
-				   timeline_name, timeline->filename);
+		if (!timeline) {
+			printf("TSUNAMI: Attempted to flush unknown timeline \"%s\"\n", timeline_name);
 		} else {
-			printf("TSUNAMI: Failed to open VCD file \"%s\" for writing\n",
-				   timeline->filename);
+			FILE *output_vcd_file = fopen(timeline->filename, "wb");
+			if (output_vcd_file) {
+
+				/* Write a simple timeline */
+				fprintf(output_vcd_file, "$timescale 1ns $end\n");
+
+				/* Dump signal hierarchy */
+				TsunamiDumpSignals_Traverse(output_vcd_file,
+											timeline, 
+											timeline->var_root.head, 
+											0);
+
+				/* Dump change deltas */
+				{
+					TsunamiLogEntry *entry;
+					uint32_t         i, j, k;
+					uint32_t         found_first_time = 0;
+
+					for (i = 0, j = timeline->log.entry_start_index; i < timeline->log.entry_count; i ++) {
+			
+						entry = (timeline->log.entry + j);
+
+						/* The first entry in the file should be a time stamp so wait for it */
+						if (!found_first_time && (entry->type != TsunamiLogEntryType_NewTime))
+							goto skip;
+
+						switch (entry->type) {
+						case TsunamiLogEntryType_NewTime:
+							fprintf(output_vcd_file, "#%llu\n", (unsigned long long) entry->new_time.time);
+							found_first_time = 1;
+							break;
+						case TsunamiLogEntryType_ChangeValue:
+							fprintf(output_vcd_file, "b");
+							for (k = 0; k < 64; k ++) 
+								fprintf(output_vcd_file, "%c", (int) ('0' + ((entry->change_value.value >> (63 - k)) & 0x1)));
+							fprintf(output_vcd_file, " %s\n", entry->change_value.var->uid);
+							break;
+						}
+			
+					skip:
+						j = ((j + 1) % timeline->log.entry_alloc_count);
+					}
+				}
+		
+				/* Dump ranges (for signals which have ranges set) */
+				TsunamiDumpRanges_Traverse(output_vcd_file,
+										   timeline, 
+										   timeline->var_root.head, 
+										   0);
+
+				fclose(output_vcd_file);
+
+				printf("TSUNAMI: Flushed timeline \"%s\" and written to VCD file \"%s\"\n",
+					   timeline_name, timeline->filename);
+			} else {
+				printf("TSUNAMI: Failed to open VCD file \"%s\" for writing\n",
+					   timeline->filename);
+			}
 		}
 	}
 	TsunamiUnlock_Internal(ctx);
@@ -419,14 +423,25 @@ void TsunamiAdvanceTimeline(const char *timeline_name)
 {
 	TsunamiTimeline *timeline = TsunamiFindTimeline_Internal(timeline_name);
 
+	if (!timeline) {
+		printf("TSUNAMI: Attempted to flush unknown timeline \"%s\"\n", timeline_name);
+		return;
+	}
+
 	/* Advance clock */
 	timeline->clk ++;
 
 	TsunamiAdvanceTimeline_Internal(timeline);
 }
+
 void TsunamiUpdateTimelineToRealtime(const char *timeline_name)
 {
 	TsunamiTimeline *timeline = TsunamiFindTimeline_Internal(timeline_name);
+
+	if (!timeline) {
+		printf("TSUNAMI: Attempted to flush unknown timeline \"%s\"\n", timeline_name);
+		return;
+	}
 
 	/* Set the clock to real-time microseconds since timeline start-up */
 	timeline->clk = (TsunamiGetMicroseconds() - timeline->starting_usec);
@@ -572,7 +587,7 @@ TsunamiVariable *TsunamiFindVariable_Internal(TsunamiTimeline *timeline, const c
 	return var;
 }
 
-void TsunamiSetValue_Internal(TsunamiTimeline *timeline, TsunamiVariable *var, uint32_t value)
+void TsunamiSetValue_Internal(TsunamiTimeline *timeline, TsunamiVariable *var, uint64_t value)
 {
 	/* Only write the variable if the data has changed for this signal */ 
 	if ((var->last_value != value) || (!var->is_defined)) {	
@@ -588,7 +603,7 @@ void TsunamiSetValue_Internal(TsunamiTimeline *timeline, TsunamiVariable *var, u
 	}
 }
 
-void TsunamiSetRange_Internal(TsunamiTimeline *timeline, TsunamiVariable *var, uint32_t range)
+void TsunamiSetRange_Internal(TsunamiTimeline *timeline, TsunamiVariable *var, uint64_t range)
 {
 	var->range = range;
 }
