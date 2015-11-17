@@ -337,7 +337,7 @@ void TsunamiFlushTimeline(const char *timeline_name)
 			if (output_vcd_file) {
 
 				/* Write a simple timeline */
-				fprintf(output_vcd_file, "$timescale 1ns $end\n");
+				fprintf(output_vcd_file, "$timescale 1us $end\n");
 
 				/* Dump signal hierarchy */
 				TsunamiDumpSignals_Traverse(output_vcd_file,
