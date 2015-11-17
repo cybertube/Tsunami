@@ -75,17 +75,21 @@ void             TsunamiSetRange_Internal(TsunamiTimeline *timeline, TsunamiVari
 		static TsunamiVariable *var      = NULL;						\
 		if (!timeline)													\
 			timeline = TsunamiFindTimeline_Internal((_timeline_name_));	\
-		if (!var)														\
-			var = TsunamiFindVariable_Internal(timeline, (_variable_name_)); \
-		if (strcmp((_variable_name_), var->full_name))					\
-			var = TsunamiFindVariable_Internal(timeline, (_variable_name_)); \
-		if (_inc_)														\
-			TsunamiSetValue_Internal(timeline, var, (var->last_value + (_value_))); \
-		else if (_setrange_)											\
-			TsunamiSetRange_Internal(timeline, var, (_value_));			\
-		else {															\
-			TsunamiSetValue_Internal(timeline, var, (uint32_t) (_value_)); \
-			var->is_pulse = (_pulse_);									\
+		if (!timeline) {												\
+			printf("TSUNAMI: Attempted to set value on unknown timeline \"%s\"\n", _timeline_name_); \
+		} else {														\
+			if (!var)													\
+				var = TsunamiFindVariable_Internal(timeline, (_variable_name_)); \
+			if (strcmp((_variable_name_), var->full_name))				\
+				var = TsunamiFindVariable_Internal(timeline, (_variable_name_)); \
+			if (_inc_)													\
+				TsunamiSetValue_Internal(timeline, var, (var->last_value + (_value_))); \
+			else if (_setrange_)										\
+				TsunamiSetRange_Internal(timeline, var, (_value_));		\
+			else {														\
+				TsunamiSetValue_Internal(timeline, var, (uint32_t) (_value_)); \
+				var->is_pulse = (_pulse_);								\
+			}															\
 		}																\
 	}
 
