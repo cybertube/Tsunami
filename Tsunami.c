@@ -62,7 +62,7 @@ typedef struct _TsunamiLogEntry {
 
 		struct {
 			TsunamiVariable *var;
-			uint64_tXX         value;
+			uint64_t         value;
 		} change_value;
 	};
 
