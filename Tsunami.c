@@ -61,7 +61,7 @@ typedef struct _TsunamiLogEntry {
 		} new_time;
 
 		struct {
-			TsunamiVariable *var;
+			TsunamiVariable *var; jklasd
 			uint64_t         value;
 		} change_value;
 	};
