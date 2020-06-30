@@ -1,0 +1,11 @@
+Status    | Description
+----------|-----------------------------------------------------------------------
+ Done     | Track maximum value per variable and use this to set the data width 
+          | thus improving tool visualisation and reducing VCD file size.
+----------|-----------------------------------------------------------------------
+ Partial  | Fix threading issue where signals with same name in multiple timelines
+          | will conflict across threads. (thread local statics)
+          | - Need to make "thread_local" optional for platforms that don't support it.
+----------|-----------------------------------------------------------------------
+          | Allow timeline to be flushed multiple times and build up a larger VCD file to disk.
+----------|-----------------------------------------------------------------------

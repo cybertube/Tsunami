@@ -45,11 +45,15 @@ typedef struct _TsunamiVariable {
 	uint32_t        is_defined;
 	uint32_t        is_pulse;
 	uint64_t        last_value;
-	uint64_t        range;              /* Maximum this value can be.  If present,
-										   this is placed at the end of the trace
-										   to allow tools to draw analogue graphs
-										   will proper scale.                     */
-
+    uint64_t        max_value;           /* Maximum value found: used to establish
+                                            VCD signal bit widths in output        */
+    uint32_t        max_value_bit_width; /* Maximum bit width needed to contain
+                                            the maximum value                     */
+	uint64_t        range;               /* Maximum this value can be.  If present,
+                                            this is placed at the end of the trace
+                                            to allow tools to draw analogue graphs
+                                            will proper scale.                     */
+    
 	struct _TsunamiVariable *next;      /* Sibling link                   */
 	struct _TsunamiVariable *head;      /* Children head                  */
 	struct _TsunamiVariable *list_next; /* Overall flat list next pointer */
@@ -71,8 +75,8 @@ void             TsunamiSetRange_Internal(TsunamiTimeline *timeline, TsunamiVari
 	
 #define TsunamiSetValue_Base_Internal2(_inc_, _pulse_, _setrange_, _value_, _timeline_name_, _variable_name_) \
 	{																	\
-		static TsunamiTimeline *timeline = NULL;						\
-		static TsunamiVariable *var      = NULL;						\
+		static thread_local TsunamiTimeline *timeline = NULL;						\
+		static thread_local TsunamiVariable *var      = NULL;						\
 		if (!timeline)													\
 			timeline = TsunamiFindTimeline_Internal((_timeline_name_));	\
 		if (!timeline) {												\
@@ -97,7 +101,7 @@ void             TsunamiSetRange_Internal(TsunamiTimeline *timeline, TsunamiVari
 
 #define TsunamiSetValue_Base_Internal(_inc_, _pulse_, _setrange_, _value_, _timeline_name_, _value_format_, ...) \
 	{																	\
-		static char             variable_name [1024];					\
+		static thread_local char             variable_name [1024];					\
 		sprintf(variable_name, (_value_format_), __VA_ARGS__);			\
 		TsunamiSetValue_Base_Internal2(_inc_, _pulse_, _setrange_, _value_, _timeline_name_, variable_name); \
 	}
@@ -106,7 +110,7 @@ void             TsunamiSetRange_Internal(TsunamiTimeline *timeline, TsunamiVari
 
 #define TsunamiSetValue_Base_Internal(_inc_, _pulse_, _setrange_, _value_, _timeline_name_, _value_format_, args...) \
 	{																	\
-		static char             variable_name [1024];					\
+		static thread_local char             variable_name [1024];					\
 		sprintf(variable_name, (_value_format_), ##args);				\
 		TsunamiSetValue_Base_Internal2(_inc_, _pulse_, _setrange_, _value_, _timeline_name_, variable_name); \
 	}

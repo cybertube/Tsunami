@@ -53,7 +53,7 @@
    empty stub macros replacing the real Tsunami APIs                                */
 
 #ifndef TSUNAMI_ENABLE
-#define TSUNAMI_ENABLE      1
+#define TSUNAMI_ENABLE      0
 #endif
 
 /* ================================================================================ */
@@ -120,6 +120,13 @@ void TsunamiAdvanceTimeline(const char *timeline_name);
    Tsunami for real-time analysis and debugging. 
 */
 void TsunamiUpdateTimelineToRealtime(const char *timeline_name);
+
+/* TsunamiAdvanceTimelineToMicroseconds():
+
+   Sets the timeline to a value in microseconds.
+*/
+void TsunamiAdvanceTimelineToMicroseconds(const char *timeline_name,
+                                          uint64_t    usec);
 
 /* ================================================================================ */
 /* Timeline value setting macros.
